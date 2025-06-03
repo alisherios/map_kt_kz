@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналитика скорости интернета в Казахстане</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #0056A4;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: white !important;
+        }
+        .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        .nav-link:hover {
+            color: white !important;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            color: white !important;
+            border-bottom: 2px solid white;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .stats-card {
+            text-align: center;
+            padding: 15px;
+            transition: transform 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .stats-card h3 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stats-card p {
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        .filter-card {
+            padding: 20px;
+        }
+        .filter-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .btn-primary {
+            background-color: #0056A4;
+            border-color: #0056A4;
+        }
+        .btn-primary:hover {
+            background-color: #004080;
+            border-color: #004080;
+        }
+        .btn-outline-primary {
+            color: #0056A4;
+            border-color: #0056A4;
+        }
+        .btn-outline-primary:hover {
+            background-color: #0056A4;
+            border-color: #0056A4;
+        }
+        .chart-container {
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        .provider-kt {
+            color: #0056A4;
+        }
+        .provider-beeline {
+            color: #FFCC00;
+        }
+        .provider-almatv {
+            color: #FF6600;
+        }
+        .footer {
+            background-color: #343a40;
+            color: white;
+            padding: 20px 0;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">Карта скорости интернета в Казахстане</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Карта</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/analytics">Аналитика</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Статистика -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <p>Всего точек</p>
+                    <h3>{{ stats.total_points }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <p>Казахтелеком (Мбит/с)</p>
+                    <h3>{{ stats.providers.kt.avg_download|round(1) }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <p>Beeline (Мбит/с)</p>
+                    <h3>{{ stats.providers.beeline.avg_download|round(1) }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <p>AlmaTV (Мбит/с)</p>
+                    <h3>{{ stats.providers.almatv.avg_download|round(1) }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card filter-card">
+                    <h5 class="filter-title">Фильтры</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Провайдер</label>
+                                <div class="form-check">
+                                    <input class="form-check-input provider-radio" type="radio" name="provider" id="allProviders" value="all" checked>
+                                    <label class="form-check-label" for="allProviders">
+                                        Все провайдеры
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input provider-radio" type="radio" name="provider" id="ktProvider" value="kt">
+                                    <label class="form-check-label provider-kt" for="ktProvider">
+                                        Казахтелеком
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input provider-radio" type="radio" name="provider" id="beelineProvider" value="beeline">
+                                    <label class="form-check-label provider-beeline" for="beelineProvider">
+                                        Beeline
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input provider-radio" type="radio" name="provider" id="almatvProvider" value="almatv">
+                                    <label class="form-check-label provider-almatv" for="almatvProvider">
+                                        AlmaTV
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Диапазон скорости (Мбит/с): <span id="speedRangeValue">0 - 500</span></label>
+                                <input type="range" class="form-range" id="speedRange" min="0" max="500" step="10" value="500">
+                                <div class="btn-group mt-2" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="speedLowBtn">Низкая (0-50)</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="speedMediumBtn">Средняя (50-100)</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="speedHighBtn">Высокая (100-500)</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button class="btn btn-secondary me-2" id="resetFiltersBtn">Сбросить</button>
+                        <button class="btn btn-primary" id="applyFiltersBtn">Применить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Графики -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Сравнение средних скоростей провайдеров</h5>
+                        <div id="providersComparisonChart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Доля провайдеров по количеству точек</h5>
+                        <div id="providersPieChart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Топ-10 городов по количеству точек</h5>
+                        <div id="citiesBarChart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Распределение скорости Казахтелеком</h5>
+                        <div id="ktHistChart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Распределение скорости Beeline</h5>
+                        <div id="beelineHistChart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Распределение скорости AlmaTV</h5>
+                        <div id="almatvHistChart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подвал -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>О проекте</h5>
+                    <p>Аналитика скорости интернета в Казахстане на основе данных тестирования скорости.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>&copy; 2025 Карта скорости интернета в Казахстане</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Получаем элементы фильтров
+            const speedRange = document.getElementById('speedRange');
+            const speedRangeValue = document.getElementById('speedRangeValue');
+            const speedLowBtn = document.getElementById('speedLowBtn');
+            const speedMediumBtn = document.getElementById('speedMediumBtn');
+            const speedHighBtn = document.getElementById('speedHighBtn');
+            const providerRadios = document.querySelectorAll('.provider-radio');
+            const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+            const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+            
+            // Текущие значения фильтров
+            let currentFilters = {
+                provider: 'all',
+                minSpeed: 0,
+                maxSpeed: 500
+            };
+            
+            // Обновление отображения диапазона скорости
+            speedRange.addEventListener('input', function() {
+                speedRangeValue.textContent = `0 - ${this.value}`;
+                currentFilters.maxSpeed = parseInt(this.value);
+            });
+            
+            // Обработка кнопок предустановленных диапазонов скорости
+            speedLowBtn.addEventListener('click', function() {
+                currentFilters.minSpeed = 0;
+                currentFilters.maxSpeed = 50;
+                speedRange.value = 50;
+                speedRangeValue.textContent = `0 - 50`;
+            });
+            
+            speedMediumBtn.addEventListener('click', function() {
+                currentFilters.minSpeed = 50;
+                currentFilters.maxSpeed = 100;
+                speedRange.value = 100;
+                speedRangeValue.textContent = `50 - 100`;
+            });
+            
+            speedHighBtn.addEventListener('click', function() {
+                currentFilters.minSpeed = 100;
+                currentFilters.maxSpeed = 500;
+                speedRange.value = 500;
+                speedRangeValue.textContent = `100 - 500`;
+            });
+            
+            // Обработка радиокнопок провайдера
+            providerRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    currentFilters.provider = this.value;
+                });
+            });
+            
+            // Инициализация графиков
+            const charts = {{ charts|safe }};
+            
+            Plotly.newPlot('providersComparisonChart', JSON.parse(charts.providers_comparison));
+            Plotly.newPlot('providersPieChart', JSON.parse(charts.providers_pie));
+            Plotly.newPlot('citiesBarChart', JSON.parse(charts.cities_bar));
+            Plotly.newPlot('ktHistChart', JSON.parse(charts.kt_hist));
+            Plotly.newPlot('beelineHistChart', JSON.parse(charts.beeline_hist));
+            Plotly.newPlot('almatvHistChart', JSON.parse(charts.almatv_hist));
+            
+            // Применение фильтров
+            applyFiltersBtn.addEventListener('click', function() {
+                // Показываем индикаторы загрузки для всех графиков
+                const chartContainers = document.querySelectorAll('.chart-container');
+                chartContainers.forEach(container => {
+                    container.innerHTML = '<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
+                });
+                
+                // Запрос обновленных графиков
+                fetch(`/get_charts?provider=${currentFilters.provider}&min_speed=${currentFilters.minSpeed}&max_speed=${currentFilters.maxSpeed}`)
+                    .then(response => response.json())
+                    .then(updatedCharts => {
+                        // Обновление графиков
+                        Plotly.newPlot('providersComparisonChart', JSON.parse(updatedCharts.providers_comparison));
+                        Plotly.newPlot('providersPieChart', JSON.parse(updatedCharts.providers_pie));
+                        Plotly.newPlot('citiesBarChart', JSON.parse(updatedCharts.cities_bar));
+                        Plotly.newPlot('ktHistChart', JSON.parse(updatedCharts.kt_hist));
+                        Plotly.newPlot('beelineHistChart', JSON.parse(updatedCharts.beeline_hist));
+                        Plotly.newPlot('almatvHistChart', JSON.parse(updatedCharts.almatv_hist));
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при загрузке графиков:', error);
+                        chartContainers.forEach(container => {
+                            container.innerHTML = '<div class="alert alert-danger">Ошибка при загрузке графиков</div>';
+                        });
+                    });
+                
+                // Запрос обновленной статистики
+                fetch(`/get_stats?provider=${currentFilters.provider}&min_speed=${currentFilters.minSpeed}&max_speed=${currentFilters.maxSpeed}`)
+                    .then(response => response.json())
+                    .then(stats => {
+                        // Обновление статистики на странице
+                        document.querySelector('.stats-card:nth-child(1) h3').textContent = stats.total_points;
+                        document.querySelector('.stats-card:nth-child(2) h3').textContent = stats.providers.kt.avg_download.toFixed(1);
+                        document.querySelector('.stats-card:nth-child(3) h3').textContent = stats.providers.beeline.avg_download.toFixed(1);
+                        document.querySelector('.stats-card:nth-child(4) h3').textContent = stats.providers.almatv.avg_download.toFixed(1);
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при загрузке статистики:', error);
+                    });
+            });
+            
+            // Сброс фильтров
+            resetFiltersBtn.addEventListener('click', function() {
+                // Сброс значений фильтров
+                document.getElementById('allProviders').checked = true;
+                speedRange.value = 500;
+                speedRangeValue.textContent = '0 - 500';
+                
+                // Обновление текущих фильтров
+                currentFilters = {
+                    provider: 'all',
+                    minSpeed: 0,
+                    maxSpeed: 500
+                };
+                
+                // Применение сброшенных фильтров
+                applyFiltersBtn.click();
+            });
+        });
+    </script>
+</body>
+</html>

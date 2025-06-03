@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналитическая карта Казахтелеком</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #0056A4;
+            --secondary-color: #FF6600;
+            --light-gray: #F5F7FA;
+            --dark-gray: #343A40;
+            --success-color: #4CAF50;
+            --warning-color: #FFCC00;
+            --danger-color: #F44336;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--light-gray);
+            color: var(--dark-gray);
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .navbar-brand img {
+            height: 40px;
+        }
+        
+        .sidebar {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .sidebar h5 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        .map-container {
+            height: 600px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dashboard {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .dashboard h4 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .stats-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stats-card h3 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .stats-card p {
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        
+        .kt-color {
+            color: var(--primary-color);
+        }
+        
+        .beeline-color {
+            color: var(--warning-color);
+        }
+        
+        .almatv-color {
+            color: var(--secondary-color);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #004483;
+            border-color: #004483;
+        }
+        
+        .form-range::-webkit-slider-thumb {
+            background: var(--primary-color);
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .nav-tabs .nav-link {
+            color: var(--dark-gray);
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            font-weight: 500;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .chart-container {
+            height: 400px;
+            margin-bottom: 30px;
+        }
+        
+        .footer {
+            background-color: var(--dark-gray);
+            color: white;
+            padding: 20px 0;
+            margin-top: 40px;
+        }
+        
+        /* Анимации */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 992px) {
+            .map-container {
+                height: 400px;
+            }
+            
+            .sidebar {
+                margin-bottom: 20px;
+            }
+        }
+        
+        /* Кастомизация Leaflet */
+        .leaflet-control-layers {
+            border-radius: 8px !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            border-radius: 10px !important;
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .marker-cluster {
+            background-color: rgba(0, 86, 164, 0.6);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+        
+        .marker-cluster div {
+            background-color: rgba(0, 86, 164, 0.8);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 80%;
+            height: 80%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <img src="https://telecom.kz/assets/img/logo.svg" alt="Казахтелеком" class="me-2">
+                <span>Аналитическая карта интернет-покрытия</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Карта</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/analytics">Аналитика</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Левая панель с фильтрами -->
+            <div class="col-lg-3">
+                <div class="sidebar">
+                    <h5>Режим отображения</h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="mapType" id="pointsMap" value="points" checked>
+                        <label class="form-check-label" for="pointsMap">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">place</span>
+                            Точки интернета
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="mapType" id="heatmapSpeed" value="heatmap_speed">
+                        <label class="form-check-label" for="heatmapSpeed">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">local_fire_department</span>
+                            Тепловая карта по скорости
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="mapType" id="heatmapDensity" value="heatmap_density">
+                        <label class="form-check-label" for="heatmapDensity">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">grid_view</span>
+                            Тепловая карта по плотности
+                        </label>
+                    </div>
+                    
+                    <h5 class="mt-4">Провайдер</h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="provider" id="allProviders" value="all" checked>
+                        <label class="form-check-label" for="allProviders">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
+                            Все провайдеры
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="provider" id="ktProvider" value="kt">
+                        <label class="form-check-label kt-color" for="ktProvider">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
+                            Казахтелеком
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="provider" id="beelineProvider" value="beeline">
+                        <label class="form-check-label beeline-color" for="beelineProvider">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
+                            Beeline
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="provider" id="almatvProvider" value="almatv">
+                        <label class="form-check-label almatv-color" for="almatvProvider">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
+                            AlmaTV
+                        </label>
+                    </div>
+                    
+                    <h5 class="mt-4">Скорость интернета</h5>
+                    <label for="speedRange" class="form-label">Диапазон скорости (Мбит/с): <span id="speedRangeValue">0 - 500</span></label>
+                    <input type="range" class="form-range mb-3" id="speedRange" min="0" max="500" step="10">
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-sm btn-outline-primary" id="speedLow">
+                            < 50 Мбит/с
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" id="speedMedium">
+                            50-100 Мбит/с
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" id="speedHigh">
+                            > 100 Мбит/с
+                        </button>
+                    </div>
+                    
+                    <div class="d-grid mt-4">
+                        <button class="btn btn-primary" id="applyFilters">
+                            <span class="material-icons align-middle me-1">filter_alt</span>
+                            Применить фильтры
+                        </button>
+                        <button class="btn btn-outline-secondary mt-2" id="resetFilters">
+                            <span class="material-icons align-middle me-1">restart_alt</span>
+                            Сбросить фильтры
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Основная область с картой -->
+            <div class="col-lg-9">
+                <div class="map-container" id="map">
+                    {{ map_html|safe }}
+                </div>
+                
+                <!-- Статистика -->
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="stats-card text-center">
+                            <h3>{{ stats.total_points }}</h3>
+                            <p>Всего точек интернета</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card text-center">
+                            <h3 class="kt-color">{{ "%.1f"|format(stats.providers.kt.avg_download) }}</h3>
+                            <p>Средняя скорость Казахтелеком</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card text-center">
+                            <h3 class="beeline-color">{{ "%.1f"|format(stats.providers.beeline.avg_download) }}</h3>
+                            <p>Средняя скорость Beeline</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card text-center">
+                            <h3 class="almatv-color">{{ "%.1f"|format(stats.providers.almatv.avg_download) }}</h3>
+                            <p>Средняя скорость AlmaTV</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Аналитика -->
+                <div class="dashboard" id="analytics">
+                    <h4>Аналитика интернет-покрытия</h4>
+                    
+                    <ul class="nav nav-tabs mb-4" id="analyticsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison" type="button" role="tab">
+                                <span class="material-icons align-middle me-1">compare</span>
+                                Сравнение провайдеров
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="distribution-tab" data-bs-toggle="tab" data-bs-target="#distribution" type="button" role="tab">
+                                <span class="material-icons align-middle me-1">bar_chart</span>
+                                Распределение скоростей
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="cities-tab" data-bs-toggle="tab" data-bs-target="#cities" type="button" role="tab">
+                                <span class="material-icons align-middle me-1">location_city</span>
+                                Города
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="analyticsTabsContent">
+                        <div class="tab-pane fade show active" id="comparison" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="chart-container" id="providersComparisonChart"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="chart-container" id="providersPieChart"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="distribution" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="chart-container" id="ktHistChart"></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="chart-container" id="beelineHistChart"></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="chart-container" id="almatvHistChart"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="cities" role="tabpanel">
+                            <div class="chart-container" id="citiesBarChart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Футер -->
+    <footer class="footer mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Аналитическая карта интернет-покрытия Казахтелеком</h5>
+                    <p>Интерактивная карта для анализа скоростей интернета различных провайдеров в Казахстане.</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Ссылки</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white">Главная</a></li>
+                        <li><a href="#analytics" class="text-white">Аналитика</a></li>
+
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>Контакты</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="https://telecom.kz" class="text-white" target="_blank">telecom.kz</a></li>
+                        <li><a href="mailto:info@telecom.kz" class="text-white">info@telecom.kz</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="mt-4 mb-4" style="border-color: rgba(255,255,255,0.2);">
+            <div class="text-center">
+                <p class="mb-0">© 2025 Казахтелеком. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    
+    <script>
+        // Инициализация графиков Plotly
+        document.addEventListener('DOMContentLoaded', function() {
+            // Загрузка графиков из JSON
+            const providersComparisonChart = JSON.parse('{{ charts.providers_comparison|safe }}');
+            const providersPieChart = JSON.parse('{{ charts.providers_pie|safe }}');
+            const ktHistChart = JSON.parse('{{ charts.kt_hist|safe }}');
+            const beelineHistChart = JSON.parse('{{ charts.beeline_hist|safe }}');
+            const almatvHistChart = JSON.parse('{{ charts.almatv_hist|safe }}');
+            const citiesBarChart = JSON.parse('{{ charts.cities_bar|safe }}');
+            
+            // Отображение графиков
+            Plotly.newPlot('providersComparisonChart', providersComparisonChart.data, providersComparisonChart.layout);
+            Plotly.newPlot('providersPieChart', providersPieChart.data, providersPieChart.layout);
+            Plotly.newPlot('ktHistChart', ktHistChart.data, ktHistChart.layout);
+            Plotly.newPlot('beelineHistChart', beelineHistChart.data, beelineHistChart.layout);
+            Plotly.newPlot('almatvHistChart', almatvHistChart.data, almatvHistChart.layout);
+            Plotly.newPlot('citiesBarChart', citiesBarChart.data, citiesBarChart.layout);
+            
+            // Обработка изменения размера окна
+            window.addEventListener('resize', function() {
+                Plotly.relayout('providersComparisonChart', {
+                    'width': document.getElementById('providersComparisonChart').offsetWidth
+                });
+                Plotly.relayout('providersPieChart', {
+                    'width': document.getElementById('providersPieChart').offsetWidth
+                });
+                Plotly.relayout('ktHistChart', {
+                    'width': document.getElementById('ktHistChart').offsetWidth
+                });
+                Plotly.relayout('beelineHistChart', {
+                    'width': document.getElementById('beelineHistChart').offsetWidth
+                });
+                Plotly.relayout('almatvHistChart', {
+                    'width': document.getElementById('almatvHistChart').offsetWidth
+                });
+                Plotly.relayout('citiesBarChart', {
+                    'width': document.getElementById('citiesBarChart').offsetWidth
+                });
+            });
+        });
+        
+        // Обработка фильтров
+        document.addEventListener('DOMContentLoaded', function() {
+            // Элементы фильтров
+            const mapTypeRadios = document.querySelectorAll('input[name="mapType"]');
+            const providerRadios = document.querySelectorAll('input[name="provider"]');
+            const speedRange = document.getElementById('speedRange');
+            const speedRangeValue = document.getElementById('speedRangeValue');
+            const applyFiltersBtn = document.getElementById('applyFilters');
+            const resetFiltersBtn = document.getElementById('resetFilters');
+            const speedLowBtn = document.getElementById('speedLow');
+            const speedMediumBtn = document.getElementById('speedMedium');
+            const speedHighBtn = document.getElementById('speedHigh');
+            
+            // Текущие значения фильтров
+            let currentFilters = {
+                mapType: 'points',
+                provider: 'all',
+                minSpeed: 0,
+                maxSpeed: 500
+            };
+            
+            // Обновление отображения диапазона скорости
+            speedRange.addEventListener('input', function() {
+                speedRangeValue.textContent = `0 - ${this.value}`;
+                currentFilters.maxSpeed = parseInt(this.value);
+            });
+            
+            // Обработка кнопок предустановленных диапазонов скорости
+            speedLowBtn.addEventListener('click', function() {
+                currentFilters.minSpeed = 0;
+                currentFilters.maxSpeed = 50;
+                speedRange.value = 50;
+                speedRangeValue.textContent = `0 - 50`;
+            });
+            
+            speedMediumBtn.addEventListener('click', function() {
+                currentFilters.minSpeed = 50;
+                currentFilters.maxSpeed = 100;
+                speedRange.value = 100;
+                speedRangeValue.textContent = `50 - 100`;
+            });
+            
+            speedHighBtn.addEventListener('click', function() {
+                currentFilters.minSpeed = 100;
+                currentFilters.maxSpeed = 500;
+                speedRange.value = 500;
+                speedRangeValue.textContent = `100 - 500`;
+            });
+            
+            // Обработка радиокнопок типа карты
+            mapTypeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    currentFilters.mapType = this.value;
+                });
+            });
+            
+            // Обработка радиокнопок провайдера
+            providerRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    currentFilters.provider = this.value;
+                });
+            });
+            
+            // Применение фильтров
+            applyFiltersBtn.addEventListener('click', function() {
+                // Показываем индикатор загрузки
+                document.getElementById('map').innerHTML = '<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
+                
+                // Запрос отфильтрованной карты
+                fetch(`/get_map?provider=${currentFilters.provider}&min_speed=${currentFilters.minSpeed}&max_speed=${currentFilters.maxSpeed}&map_type=${currentFilters.mapType}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('map').innerHTML = html;
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при загрузке карты:', error);
+                        document.getElementById('map').innerHTML = '<div class="alert alert-danger">Ошибка при загрузке карты</div>';
+                    });
+                
+                // Запрос обновленной статистики
+                fetch(`/get_stats?provider=${currentFilters.provider}&min_speed=${currentFilters.minSpeed}&max_speed=${currentFilters.maxSpeed}`)
+                    .then(response => response.json())
+                    .then(stats => {
+                        // Обновление статистики на странице
+                        document.querySelector('.stats-card:nth-child(1) h3').textContent = stats.total_points;
+                        document.querySelector('.stats-card:nth-child(2) h3').textContent = stats.providers.kt.avg_download.toFixed(1);
+                        document.querySelector('.stats-card:nth-child(3) h3').textContent = stats.providers.beeline.avg_download.toFixed(1);
+                        document.querySelector('.stats-card:nth-child(4) h3').textContent = stats.providers.almatv.avg_download.toFixed(1);
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при загрузке статистики:', error);
+                    });
+            });
+            
+            // Сброс фильтров
+            resetFiltersBtn.addEventListener('click', function() {
+                // Сброс значений фильтров
+                document.getElementById('pointsMap').checked = true;
+                document.getElementById('allProviders').checked = true;
+                speedRange.value = 500;
+                speedRangeValue.textContent = '0 - 500';
+                
+                // Обновление текущих фильтров
+                currentFilters = {
+                    mapType: 'points',
+                    provider: 'all',
+                    minSpeed: 0,
+                    maxSpeed: 500
+                };
+                
+                // Применение сброшенных фильтров
+                applyFiltersBtn.click();
+            });
+        });
+    </script>
+</body>
+</html>
