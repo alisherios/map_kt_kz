@@ -148,7 +148,7 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color, icon='wifi', prefix='fa')
+                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
             ).add_to(kt_group)
         
         if row['beeline_speedtest'] == 1:
@@ -156,7 +156,7 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color, icon='wifi', prefix='fa')
+                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
             ).add_to(beeline_group)
         
         if row['almatv_speedtest'] == 1:
@@ -164,13 +164,18 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color, icon='wifi', prefix='fa')
+                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
             ).add_to(almatv_group)
     
-    # Добавляем группы на карту
+    # Добавляем группы на карту и делаем их видимыми по умолчанию
     kt_group.add_to(m)
     beeline_group.add_to(m)
     almatv_group.add_to(m)
+    
+    # Отладочная информация о количестве маркеров
+    print(f"Добавлено маркеров Казахтелеком: {len(filtered_data[filtered_data['kt_speedtest'] == 1])}")
+    print(f"Добавлено маркеров Beeline: {len(filtered_data[filtered_data['beeline_speedtest'] == 1])}")
+    print(f"Добавлено маркеров AlmaTV: {len(filtered_data[filtered_data['almatv_speedtest'] == 1])}")
     
     return m
 
