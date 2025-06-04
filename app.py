@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import numpy as np
 import folium
@@ -20,8 +20,8 @@ except Exception as e:
 
 # Функция для создания базовой карты
 def create_base_map():
+    # Центрируем карту на Астане
     m = folium.Map(location=[51.1605, 71.4704], zoom_start=12, tiles='CartoDB positron')
-    folium.LayerControl().add_to(m)
     return m
 
 # Функция для проверки и очистки данных
@@ -55,8 +55,8 @@ def validate_data(data):
 
 # Функция для добавления точек на карту
 def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
+    # Проверка данных перед обработкой
     if data.empty:
-        print("Ошибка: данные пусты")
         folium.Marker(
             location=[51.1605, 71.4704],
             popup="Ошибка загрузки данных. Пожалуйста, проверьте формат данных.",
@@ -64,10 +64,13 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         ).add_to(m)
         return m
     
+    # Фильтрация данных
     filtered_data = data.copy()
-    filtered_data = filtered_data.dropna(subset=['latitude_speedtest', 'longitude_speedtest'])
-    print(f"После удаления NaN координат: {len(filtered_data)} строк")
     
+    # Удаляем строки с отсутствующими координатами
+    filtered_data = filtered_data.dropna(subset=['latitude_speedtest', 'longitude_speedtest'])
+    
+    # Определяем колонку скорости в зависимости от провайдера
     if provider != 'all':
         if provider == 'kt':
             filtered_data = filtered_data[filtered_data['kt_speedtest'] == 1]
@@ -79,16 +82,16 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
             filtered_data = filtered_data[filtered_data['almatv_speedtest'] == 1]
             speed_column = 'almatv_download_speed'
     else:
+        # Для всех провайдеров используем максимальную скорость из доступных
         filtered_data['max_download_speed'] = filtered_data[['kt_download_speed', 'beeline_download_speed', 'almatv_download_speed']].max(axis=1, skipna=True)
         speed_column = 'max_download_speed'
-        print(f"Значения max_download_speed: {filtered_data['max_download_speed'].describe()}")
     
+    # Фильтрация по скорости
     filtered_data = filtered_data[(filtered_data[speed_column] >= min_speed) & 
                                  (filtered_data[speed_column] <= max_speed)]
-    print(f"После фильтрации по скорости: {len(filtered_data)} строк")
     
+    # Проверяем, остались ли данные после фильтрации
     if len(filtered_data) == 0:
-        print("Нет данных после фильтрации")
         folium.Marker(
             location=[51.1605, 71.4704],
             popup="Нет данных, соответствующих выбранным фильтрам",
@@ -96,16 +99,24 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         ).add_to(m)
         return m
     
-    kt_group = folium.FeatureGroup(name='Казахтелеком', show=True)
-    beeline_group = folium.FeatureGroup(name='Beeline', show=True)
-    almatv_group = folium.FeatureGroup(name='AlmaTV', show=True)
+    # Выводим информацию о количестве точек для отладки
+    print(f"Количество точек для отображения: {len(filtered_data)}")
+    print(f"Пример координат: {filtered_data[['latitude_speedtest', 'longitude_speedtest']].head(3).values}")
     
+    # Создаем группы для каждого провайдера
+    kt_group = folium.FeatureGroup(name='Казахтелеком')
+    beeline_group = folium.FeatureGroup(name='Beeline')
+    almatv_group = folium.FeatureGroup(name='AlmaTV')
+    
+    # Добавляем точки на карту
     for _, row in filtered_data.iterrows():
+        # Определяем скорость для текущей точки
         if provider != 'all':
             current_speed = row[speed_column]
         else:
             current_speed = row['max_download_speed']
             
+        # Определяем цвет маркера в зависимости от скорости
         if current_speed < 50:
             color = 'red'
         elif current_speed < 100:
@@ -113,6 +124,7 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         else:
             color = 'green'
         
+        # Создаем всплывающее окно
         popup_html = f"""
         <div style="width: 250px; padding: 10px; font-family: Arial, sans-serif;">
             <h4 style="margin-top: 0; color: #0056A4; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px;">{row['address'] if 'address' in row else 'Точка интернета'}</h4>
@@ -127,14 +139,16 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         </div>
         """
         
+        # Создаем попап с фиксированной шириной
         popup = folium.Popup(popup_html, max_width=300)
         
+        # Добавляем маркер в соответствующую группу
         if row['kt_speedtest'] == 1:
             folium.Marker(
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color)
+                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
             ).add_to(kt_group)
         
         if row['beeline_speedtest'] == 1:
@@ -142,7 +156,7 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color)
+                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
             ).add_to(beeline_group)
         
         if row['almatv_speedtest'] == 1:
@@ -150,13 +164,15 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color)
+                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
             ).add_to(almatv_group)
     
+    # Добавляем группы на карту и делаем их видимыми по умолчанию
     kt_group.add_to(m)
     beeline_group.add_to(m)
     almatv_group.add_to(m)
     
+    # Отладочная информация о количестве маркеров
     print(f"Добавлено маркеров Казахтелеком: {len(filtered_data[filtered_data['kt_speedtest'] == 1])}")
     print(f"Добавлено маркеров Beeline: {len(filtered_data[filtered_data['beeline_speedtest'] == 1])}")
     print(f"Добавлено маркеров AlmaTV: {len(filtered_data[filtered_data['almatv_speedtest'] == 1])}")
@@ -318,50 +334,50 @@ def create_charts(data, stats):
             almatv_hist.update_layout(annotations=[dict(text="Нет данных для AlmaTV", showarrow=False, xref="paper", yref="paper", x=0.5, y=0.5)])
         
         # 2. Сравнение средних скоростей провайдеров
-        providers_comparison = go.Figure()
-        providers_comparison.add_trace(go.Bar(
-            x=['Казахтелеком', 'Beeline', 'AlmaTV'],
-            y=[stats['providers']['kt']['avg_download'], 
-               stats['providers']['beeline']['avg_download'], 
-               stats['providers']['almatv']['avg_download']],
-            marker_color=['#0056A4', '#FFCC00', '#FF6600']
-        ))
-        providers_comparison.update_layout(
-            title='Сравнение средних скоростей провайдеров',
-            xaxis_title='Провайдер',
-            yaxis_title='Средняя скорость загрузки (Мбит/с)',
-            template='plotly_white'
-        )
+        providers_comparison = go.Figure(data=[
+            go.Bar(name='Скорость загрузки', 
+                   x=['Казахтелеком', 'Beeline', 'AlmaTV'], 
+                   y=[stats['providers']['kt']['avg_download'], 
+                      stats['providers']['beeline']['avg_download'], 
+                      stats['providers']['almatv']['avg_download']],
+                   marker_color=['#0056A4', '#FFCC00', '#FF6600']),
+            go.Bar(name='Скорость выгрузки', 
+                   x=['Казахтелеком', 'Beeline', 'AlmaTV'], 
+                   y=[stats['providers']['kt']['avg_upload'], 
+                      stats['providers']['beeline']['avg_upload'], 
+                      stats['providers']['almatv']['avg_upload']],
+                   marker_color=['#4D94DB', '#FFE066', '#FF9966'])
+        ])
+        providers_comparison.update_layout(title='Сравнение средних скоростей провайдеров',
+                                          xaxis_title='Провайдер',
+                                          yaxis_title='Скорость (Мбит/с)',
+                                          barmode='group')
         
         # 3. Круговая диаграмма доли провайдеров
         providers_pie = go.Figure(data=[go.Pie(
             labels=['Казахтелеком', 'Beeline', 'AlmaTV'],
             values=[stats['providers']['kt']['count'], 
-                   stats['providers']['beeline']['count'], 
-                   stats['providers']['almatv']['count']],
-            marker_colors=['#0056A4', '#FFCC00', '#FF6600']
+                    stats['providers']['beeline']['count'], 
+                    stats['providers']['almatv']['count']],
+            marker_colors=['#0056A4', '#FFCC00', '#FF6600'],
+            hole=.3
         )])
-        providers_pie.update_layout(
-            title='Доля провайдеров по количеству точек',
-            template='plotly_white'
-        )
+        providers_pie.update_layout(title='Доля провайдеров по количеству точек')
         
         # 4. Топ-10 городов по количеству точек
         if 'cities' in stats and stats['cities']:
-            # Сортируем города по количеству точек
-            sorted_cities = sorted(stats['cities'].items(), key=lambda x: x[1], reverse=True)[:10]
-            cities_bar = px.bar(
-                x=[city for city, _ in sorted_cities],
-                y=[count for _, count in sorted_cities],
-                title='Топ-10 городов по количеству точек',
-                labels={'x': 'Город', 'y': 'Количество точек'},
-                color_discrete_sequence=['#0056A4']
-            )
+            cities_data = pd.DataFrame(list(stats['cities'].items()), columns=['city', 'count'])
+            cities_data = cities_data.sort_values('count', ascending=False).head(10)
+            
+            cities_bar = px.bar(cities_data, x='city', y='count',
+                               title='Топ-10 городов по количеству точек',
+                               labels={'city': 'Город', 'count': 'Количество точек'},
+                               color_discrete_sequence=['#0056A4'])
         else:
             cities_bar = px.bar(title='Топ-10 городов по количеству точек')
             cities_bar.update_layout(annotations=[dict(text="Нет данных о городах", showarrow=False, xref="paper", yref="paper", x=0.5, y=0.5)])
     
-    # Преобразуем графики в JSON для передачи на фронтенд
+    # Преобразуем графики в JSON для передачи в шаблон
     charts = {
         'kt_hist': kt_hist.to_json(),
         'beeline_hist': beeline_hist.to_json(),
@@ -373,12 +389,66 @@ def create_charts(data, stats):
     
     return charts
 
-# Функция для создания карты с точками или тепловым слоем
-def create_map_with_data(provider='all', min_speed=0, max_speed=500, map_type='points'):
+# Главная страница с картой
+@app.route('/')
+def index():
+    # Проверяем данные
+    if df.empty:
+        return render_template('error.html', message="Ошибка загрузки данных. Проверьте файл данных.")
+    
     # Создаем базовую карту
     m = create_base_map()
     
-    # Добавляем слои в зависимости от типа карты
+    # Добавляем точки на карту
+    m = add_points_to_map(m, df)
+    
+    # Добавляем контроль слоев
+    folium.LayerControl().add_to(m)
+    
+    # Получаем статистику
+    stats = get_statistics(df)
+    
+    # Создаем графики
+    charts = create_charts(df, stats)
+    
+    # Сохраняем карту во временный файл
+    map_html = m._repr_html_()
+    
+    return render_template('index.html', 
+                          map_html=map_html,
+                          stats=stats,
+                          charts=charts)
+
+# Страница аналитики
+@app.route('/analytics')
+def analytics():
+    # Проверяем данные
+    if df.empty:
+        return render_template('error.html', message="Ошибка загрузки данных. Проверьте файл данных.")
+    
+    # Получаем статистику
+    stats = get_statistics(df)
+    
+    # Создаем графики
+    charts = create_charts(df, stats)
+    
+    return render_template('analytics.html', 
+                          stats=stats,
+                          charts=charts)
+
+# API для обновления карты при изменении фильтров
+@app.route('/update_map', methods=['GET'])
+def update_map():
+    # Получаем параметры фильтрации
+    provider = request.args.get('provider', 'all')
+    min_speed = float(request.args.get('min_speed', 0))
+    max_speed = float(request.args.get('max_speed', 500))
+    map_type = request.args.get('map_type', 'points')
+    
+    # Создаем базовую карту
+    m = create_base_map()
+    
+    # Добавляем соответствующий слой в зависимости от типа карты
     if map_type == 'points':
         m = add_points_to_map(m, df, provider, min_speed, max_speed)
     elif map_type == 'heatmap_speed':
@@ -386,61 +456,23 @@ def create_map_with_data(provider='all', min_speed=0, max_speed=500, map_type='p
     elif map_type == 'heatmap_density':
         m = add_heatmap_to_map(m, df, provider, min_speed, max_speed, 'density')
     
+    # Добавляем контроль слоев
+    folium.LayerControl().add_to(m)
+    
     # Возвращаем HTML-код карты
     return m._repr_html_()
 
-# Маршрут для главной страницы
-@app.route('/')
-def index():
-    # Получаем статистику для всех данных
-    stats = get_statistics(df)
-    
-    # Создаем графики для отображения на странице
-    charts = create_charts(df, stats)
-    
-    # Создаем начальную карту с точками
-    map_html = create_map_with_data()
-    
-    # Передаем статистику, графики и карту в шаблон
-    return render_template('index.html', stats=stats, charts=charts, map_html=map_html)
-
-# Маршрут для страницы аналитики
-@app.route('/analytics')
-def analytics():
-    # Получаем статистику для всех данных
-    stats = get_statistics(df)
-    
-    # Создаем графики для отображения на странице
-    charts = create_charts(df, stats)
-    
-    return render_template('analytics.html', stats=stats, charts=charts)
-
-# Маршрут для получения карты с фильтрами
-@app.route('/get_map')
-def get_map():
-    # Получаем параметры запроса
-    provider = request.args.get('provider', 'all')
-    min_speed = int(request.args.get('min_speed', 0))
-    max_speed = int(request.args.get('max_speed', 500))
-    map_type = request.args.get('map_type', 'points')
-    
-    # Создаем карту с заданными параметрами
-    map_html = create_map_with_data(provider, min_speed, max_speed, map_type)
-    
-    return map_html
-
-# Маршрут для получения статистики с фильтрами
+# Маршрут для получения статистики
 @app.route('/get_stats')
 def get_stats():
-    # Получаем параметры запроса
+    # Получаем параметры фильтрации
     provider = request.args.get('provider', 'all')
-    min_speed = int(request.args.get('min_speed', 0))
-    max_speed = int(request.args.get('max_speed', 500))
+    min_speed = float(request.args.get('min_speed', 0))
+    max_speed = float(request.args.get('max_speed', 500))
     
     # Фильтруем данные
     filtered_data = df.copy()
     
-    # Фильтрация по провайдеру
     if provider != 'all':
         if provider == 'kt':
             filtered_data = filtered_data[filtered_data['kt_speedtest'] == 1]
@@ -454,18 +486,17 @@ def get_stats():
     
     return jsonify(stats)
 
-# Маршрут для получения графиков с фильтрами
+# Маршрут для получения графиков
 @app.route('/get_charts')
 def get_charts():
-    # Получаем параметры запроса
+    # Получаем параметры фильтрации
     provider = request.args.get('provider', 'all')
-    min_speed = int(request.args.get('min_speed', 0))
-    max_speed = int(request.args.get('max_speed', 500))
+    min_speed = float(request.args.get('min_speed', 0))
+    max_speed = float(request.args.get('max_speed', 500))
     
     # Фильтруем данные
     filtered_data = df.copy()
     
-    # Фильтрация по провайдеру
     if provider != 'all':
         if provider == 'kt':
             filtered_data = filtered_data[filtered_data['kt_speedtest'] == 1]
@@ -481,11 +512,6 @@ def get_charts():
     charts = create_charts(filtered_data, stats)
     
     return jsonify(charts)
-
-# Маршрут для обслуживания статических файлов
-@app.route('/static/<path:path>')
-def serve_static(path):
-    return send_from_directory('static', path)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
