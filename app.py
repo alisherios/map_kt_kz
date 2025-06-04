@@ -437,8 +437,8 @@ def analytics():
                           charts=charts)
 
 # API для обновления карты при изменении фильтров
-@app.route('/update_map', methods=['GET'])
-def update_map():
+@app.route('/get_map', methods=['GET'])
+def get_map():
     # Получаем параметры фильтрации
     provider = request.args.get('provider', 'all')
     min_speed = float(request.args.get('min_speed', 0))
