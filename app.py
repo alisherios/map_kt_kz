@@ -87,7 +87,7 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         speed_column = 'max_download_speed'
     
     # Фильтрация по скорости
-    filtered_data = filtered_data[(filtered_data[speed_column] >= min_speed) & 
+    #filtered_data = filtered_data[(filtered_data[speed_column] >= min_speed) & 
                                  (filtered_data[speed_column] <= max_speed)]
     
     # Проверяем, остались ли данные после фильтрации
