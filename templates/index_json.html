@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналитическая карта интернет-покрытия</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    
+    <!-- Leaflet Awesome Markers CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css" />
+    
+    <!-- Custom CSS -->
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .navbar {
+            background-color: #0056A4;
+        }
+        
+        .navbar-brand img {
+            height: 30px;
+            margin-right: 10px;
+        }
+        
+        .map-container {
+            height: 600px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-check-input:checked {
+            background-color: #0056A4;
+            border-color: #0056A4;
+        }
+        
+        .kt-color {
+            color: #0056A4;
+        }
+        
+        .beeline-color {
+            color: #FFCC00;
+        }
+        
+        .almatv-color {
+            color: #FF6600;
+        }
+        
+        footer {
+            background-color: #0056A4;
+            color: white;
+            padding: 30px 0;
+            margin-top: 50px;
+        }
+        
+        .btn-primary {
+            background-color: #0056A4;
+            border-color: #0056A4;
+        }
+        
+        .btn-primary:hover {
+            background-color: #004483;
+            border-color: #004483;
+        }
+        
+        .btn-outline-primary {
+            color: #0056A4;
+            border-color: #0056A4;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #0056A4;
+            color: white;
+        }
+        
+        .marker-popup h5 {
+            margin-bottom: 10px;
+            color: #0056A4;
+        }
+        
+        .marker-popup ul {
+            padding-left: 15px;
+        }
+        
+        .language-switcher {
+            margin-left: 15px;
+        }
+        
+        .language-switcher .btn {
+            padding: 2px 8px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="https://telecom.kz/images/logo.svg" alt="Казахтелеком">
+                <span class="lang-ru">Аналитическая карта интернет-покрытия</span>
+                <span class="lang-kk d-none">Интернет жабу аналитикалық картасы</span>
+            </a>
+            <div class="d-flex">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">
+                            <span class="lang-ru">Карта</span>
+                            <span class="lang-kk d-none">Карта</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/analytics">
+                            <span class="lang-ru">Аналитика</span>
+                            <span class="lang-kk d-none">Аналитика</span>
+                        </a>
+                    </li>
+                </ul>
+                <div class="language-switcher">
+                    <button id="langRu" class="btn btn-sm btn-light">RU</button>
+                    <button id="langKk" class="btn btn-sm btn-outline-light">KK</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Основной контент -->
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Боковая панель с фильтрами -->
+            <div class="col-lg-3 mb-4">
+                <div class="sidebar">
+                    <h5>
+                        <span class="lang-ru">Режим отображения</span>
+                        <span class="lang-kk d-none">Көрсету режимі</span>
+                    </h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="displayMode" id="pointsMode" checked>
+                        <label class="form-check-label" for="pointsMode">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">place</span>
+                            <span class="lang-ru">Точки интернета</span>
+                            <span class="lang-kk d-none">Интернет нүктелері</span>
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="displayMode" id="heatmapSpeedMode">
+                        <label class="form-check-label" for="heatmapSpeedMode">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">local_fire_department</span>
+                            <span class="lang-ru">Тепловая карта по скорости</span>
+                            <span class="lang-kk d-none">Жылдамдық бойынша жылу картасы</span>
+                        </label>
+                    </div>
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="radio" name="displayMode" id="heatmapDensityMode">
+                        <label class="form-check-label" for="heatmapDensityMode">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">grid_3x3</span>
+                            <span class="lang-ru">Тепловая карта по плотности</span>
+                            <span class="lang-kk d-none">Тығыздық бойынша жылу картасы</span>
+                        </label>
+                    </div>
+                    
+                    <h5>
+                        <span class="lang-ru">Провайдер</span>
+                        <span class="lang-kk d-none">Провайдер</span>
+                    </h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="provider" id="allProviders" value="all" checked>
+                        <label class="form-check-label" for="allProviders">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
+                            <span class="lang-ru">Все провайдеры</span>
+                            <span class="lang-kk d-none">Барлық провайдерлер</span>
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="provider" id="ktProvider" value="kt">
+                        <label class="form-check-label kt-color" for="ktProvider">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
+                            <span class="lang-ru">Казахтелеком</span>
+                            <span class="lang-kk d-none">Қазақтелеком</span>
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="provider" id="beelineProvider" value="beeline">
+                        <label class="form-check-label beeline-color" for="beelineProvider">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
+                            <span class="lang-ru">Beeline</span>
+                            <span class="lang-kk d-none">Beeline</span>
+                        </label>
+                    </div>
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="radio" name="provider" id="almatvProvider" value="almatv">
+                        <label class="form-check-label almatv-color" for="almatvProvider">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
+                            <span class="lang-ru">AlmaTV</span>
+                            <span class="lang-kk d-none">AlmaTV</span>
+                        </label>
+                    </div>
+                    
+                    <h5 class="mt-4">
+                        <span class="lang-ru">Скорость интернета</span>
+                        <span class="lang-kk d-none">Интернет жылдамдығы</span>
+                    </h5>
+                    <label for="speedRange" class="form-label">
+                        <span class="lang-ru">Диапазон скорости (Мбит/с):</span>
+                        <span class="lang-kk d-none">Жылдамдық диапазоны (Мбит/с):</span>
+                        <span id="speedRangeValue">0 - 500</span>
+                    </label>
+                    <input type="range" class="form-range mb-3" id="speedRange" min="0" max="500" step="10" value="500">
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-sm btn-outline-primary" id="speedLow">
+                            <span class="lang-ru">< 50 Мбит/с</span>
+                            <span class="lang-kk d-none">< 50 Мбит/с</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" id="speedMedium">
+                            <span class="lang-ru">50-100 Мбит/с</span>
+                            <span class="lang-kk d-none">50-100 Мбит/с</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" id="speedHigh">
+                            <span class="lang-ru">> 100 Мбит/с</span>
+                            <span class="lang-kk d-none">> 100 Мбит/с</span>
+                        </button>
+                    </div>
+                    
+                    <div class="d-grid mt-4">
+                        <button class="btn btn-primary" id="applyFilters">
+                            <span class="material-icons align-middle me-1">filter_alt</span>
+                            <span class="lang-ru">Применить фильтры</span>
+                            <span class="lang-kk d-none">Сүзгілерді қолдану</span>
+                        </button>
+                        <button class="btn btn-outline-secondary mt-2" id="resetFilters">
+                            <span class="material-icons align-middle me-1">restart_alt</span>
+                            <span class="lang-ru">Сбросить фильтры</span>
+                            <span class="lang-kk d-none">Сүзгілерді қалпына келтіру</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Основная область с картой -->
+            <div class="col-lg-9">
+                <div class="map-container" id="map"></div>
+                
+                <!-- Ссылка на страницу аналитики -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card p-4 text-center">
+                            <h4 class="mb-3">
+                                <span class="lang-ru">Подробная аналитика и статистика</span>
+                                <span class="lang-kk d-none">Толық аналитика және статистика</span>
+                            </h4>
+                            <p class="mb-4">
+                                <span class="lang-ru">Для просмотра подробной аналитики по скорости интернета, распределению провайдеров и другой статистики перейдите на страницу аналитики.</span>
+                                <span class="lang-kk d-none">Интернет жылдамдығы, провайдерлер таралуы және басқа статистика бойынша толық аналитиканы көру үшін аналитика бетіне өтіңіз.</span>
+                            </p>
+                            <a href="/analytics" class="btn btn-primary btn-lg">
+                                <span class="material-icons align-middle me-1">analytics</span>
+                                <span class="lang-ru">Перейти к аналитике</span>
+                                <span class="lang-kk d-none">Аналитикаға өту</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Подвал -->
+    <footer class="mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Аналитическая карта интернет-покрытия Казахтелеком</h5>
+                    <p>Интерактивная карта для анализа скоростей интернета различных провайдеров в Казахстане.</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Ссылки</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="/" class="text-white">Главная</a></li>
+                        <li><a href="/analytics" class="text-white">Аналитика</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>Контакты</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="https://telecom.kz" class="text-white" target="_blank">telecom.kz</a></li>
+                        <li><a href="mailto:info@telecom.kz" class="text-white">info@telecom.kz</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="mt-4 mb-4" style="border-color: rgba(255,255,255,0.2);">
+            <div class="text-center">
+                <p class="mb-0">© 2025 Казахтелеком. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    
+    <!-- Leaflet MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <!-- Leaflet Awesome Markers JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.min.js"></script>
+    
+    <!-- Leaflet Heat JS -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="/static/js/map_handler.js"></script>
+</body>
+</html>
