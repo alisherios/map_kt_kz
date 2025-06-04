@@ -55,8 +55,8 @@ def validate_data(data):
 
 # Функция для добавления точек на карту
 def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
-    # Проверка данных перед обработкой
     if data.empty:
+        print("Ошибка: данные пусты")
         folium.Marker(
             location=[51.1605, 71.4704],
             popup="Ошибка загрузки данных. Пожалуйста, проверьте формат данных.",
@@ -64,13 +64,10 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         ).add_to(m)
         return m
     
-    # Фильтрация данных
     filtered_data = data.copy()
-    
-    # Удаляем строки с отсутствующими координатами
     filtered_data = filtered_data.dropna(subset=['latitude_speedtest', 'longitude_speedtest'])
+    print(f"После удаления NaN координат: {len(filtered_data)} строк")
     
-    # Определяем колонку скорости в зависимости от провайдера
     if provider != 'all':
         if provider == 'kt':
             filtered_data = filtered_data[filtered_data['kt_speedtest'] == 1]
@@ -82,16 +79,16 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
             filtered_data = filtered_data[filtered_data['almatv_speedtest'] == 1]
             speed_column = 'almatv_download_speed'
     else:
-        # Для всех провайдеров используем максимальную скорость из доступных
         filtered_data['max_download_speed'] = filtered_data[['kt_download_speed', 'beeline_download_speed', 'almatv_download_speed']].max(axis=1, skipna=True)
         speed_column = 'max_download_speed'
+        print(f"Значения max_download_speed: {filtered_data['max_download_speed'].describe()}")
     
-    # Фильтрация по скорости
     filtered_data = filtered_data[(filtered_data[speed_column] >= min_speed) & 
                                  (filtered_data[speed_column] <= max_speed)]
+    print(f"После фильтрации по скорости: {len(filtered_data)} строк")
     
-    # Проверяем, остались ли данные после фильтрации
     if len(filtered_data) == 0:
+        print("Нет данных после фильтрации")
         folium.Marker(
             location=[51.1605, 71.4704],
             popup="Нет данных, соответствующих выбранным фильтрам",
@@ -99,24 +96,16 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         ).add_to(m)
         return m
     
-    # Выводим информацию о количестве точек для отладки
-    print(f"Количество точек для отображения: {len(filtered_data)}")
-    print(f"Пример координат: {filtered_data[['latitude_speedtest', 'longitude_speedtest']].head(3).values}")
+    kt_group = folium.FeatureGroup(name='Казахтелеком', show=True)
+    beeline_group = folium.FeatureGroup(name='Beeline', show=True)
+    almatv_group = folium.FeatureGroup(name='AlmaTV', show=True)
     
-    # Создаем группы для каждого провайдера
-    kt_group = folium.FeatureGroup(name='Казахтелеком')
-    beeline_group = folium.FeatureGroup(name='Beeline')
-    almatv_group = folium.FeatureGroup(name='AlmaTV')
-    
-    # Добавляем точки на карту
     for _, row in filtered_data.iterrows():
-        # Определяем скорость для текущей точки
         if provider != 'all':
             current_speed = row[speed_column]
         else:
             current_speed = row['max_download_speed']
             
-        # Определяем цвет маркера в зависимости от скорости
         if current_speed < 50:
             color = 'red'
         elif current_speed < 100:
@@ -124,7 +113,6 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         else:
             color = 'green'
         
-        # Создаем всплывающее окно
         popup_html = f"""
         <div style="width: 250px; padding: 10px; font-family: Arial, sans-serif;">
             <h4 style="margin-top: 0; color: #0056A4; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px;">{row['address'] if 'address' in row else 'Точка интернета'}</h4>
@@ -139,16 +127,14 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
         </div>
         """
         
-        # Создаем попап с фиксированной шириной
         popup = folium.Popup(popup_html, max_width=300)
         
-        # Добавляем маркер в соответствующую группу
         if row['kt_speedtest'] == 1:
             folium.Marker(
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
+                icon=folium.Icon(color=color)
             ).add_to(kt_group)
         
         if row['beeline_speedtest'] == 1:
@@ -156,7 +142,7 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
+                icon=folium.Icon(color=color)
             ).add_to(beeline_group)
         
         if row['almatv_speedtest'] == 1:
@@ -164,15 +150,13 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
                 location=[row['latitude_speedtest'], row['longitude_speedtest']],
                 popup=popup,
                 tooltip=f"Скорость: {current_speed:.1f} Мбит/с",
-                icon=folium.Icon(color=color)  # Используем стандартную иконку без FontAwesome
+                icon=folium.Icon(color=color)
             ).add_to(almatv_group)
     
-    # Добавляем группы на карту и делаем их видимыми по умолчанию
     kt_group.add_to(m)
     beeline_group.add_to(m)
     almatv_group.add_to(m)
     
-    # Отладочная информация о количестве маркеров
     print(f"Добавлено маркеров Казахтелеком: {len(filtered_data[filtered_data['kt_speedtest'] == 1])}")
     print(f"Добавлено маркеров Beeline: {len(filtered_data[filtered_data['beeline_speedtest'] == 1])}")
     print(f"Добавлено маркеров AlmaTV: {len(filtered_data[filtered_data['almatv_speedtest'] == 1])}")
