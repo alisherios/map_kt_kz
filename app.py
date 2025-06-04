@@ -180,16 +180,20 @@ def add_points_to_map(m, data, provider='all', min_speed=0, max_speed=500):
     return m
 
 # Функция для добавления тепловой карты
-def add_heatmap_to_map(m, data, provider='all', min_speed=0, max_speed=500, heatmap_type='speed'):
-    # Проверка данных
+def add_heatmap_to_map(m, data, map_type='heatmap_speed', provider='all', min_speed=0, max_speed=500):
     if data.empty:
+        print("Ошибка: данные для тепловой карты пусты")
+        folium.Marker(
+            location=[51.1605, 71.4704],
+            popup="Ошибка загрузки данных для тепловой карты.",
+            icon=folium.Icon(color="red", icon="info-sign")
+        ).add_to(m)
         return m
-    
-    # Фильтрация данных
+
     filtered_data = data.copy()
     filtered_data = filtered_data.dropna(subset=['latitude_speedtest', 'longitude_speedtest'])
-    
-    # Определяем колонку скорости в зависимости от провайдера
+    print(f"После удаления NaN координат для тепловой карты: {len(filtered_data)} строк")
+
     if provider != 'all':
         if provider == 'kt':
             filtered_data = filtered_data[filtered_data['kt_speedtest'] == 1]
@@ -201,30 +205,35 @@ def add_heatmap_to_map(m, data, provider='all', min_speed=0, max_speed=500, heat
             filtered_data = filtered_data[filtered_data['almatv_speedtest'] == 1]
             speed_column = 'almatv_download_speed'
     else:
-        # Для всех провайдеров используем максимальную скорость из доступных
         filtered_data['max_download_speed'] = filtered_data[['kt_download_speed', 'beeline_download_speed', 'almatv_download_speed']].max(axis=1, skipna=True)
         speed_column = 'max_download_speed'
-    
-    # Фильтрация по скорости
+        print(f"Значения max_download_speed для тепловой карты: {filtered_data['max_download_speed'].describe()}")
+
     filtered_data = filtered_data[(filtered_data[speed_column] >= min_speed) & 
                                  (filtered_data[speed_column] <= max_speed)]
-    
-    # Подготовка данных для тепловой карты
-    if heatmap_type == 'speed':
-        # Тепловая карта по скорости
-        heat_data = [[row['latitude_speedtest'], row['longitude_speedtest'], row[speed_column]] 
-                     for _, row in filtered_data.iterrows()]
-        name = 'Тепловая карта скорости'
-    else:
-        # Тепловая карта по плотности
-        heat_data = [[row['latitude_speedtest'], row['longitude_speedtest'], 1] 
-                     for _, row in filtered_data.iterrows()]
-        name = 'Тепловая карта плотности'
-    
-    # Добавляем тепловую карту
-    if heat_data:
-        HeatMap(heat_data, name=name, min_opacity=0.3, radius=15).add_to(m)
-    
+    print(f"После фильтрации по скорости для тепловой карты: {len(filtered_data)} строк")
+
+    if len(filtered_data) == 0:
+        print("Нет данных после фильтрации для тепловой карты")
+        folium.Marker(
+            location=[51.1605, 71.4704],
+            popup="Нет данных для тепловой карты, соответствующих фильтрам",
+            icon=folium.Icon(color="orange", icon="info-sign")
+        ).add_to(m)
+        return m
+
+    if map_type == 'heatmap_speed':
+        heat_data = []
+        for _, row in filtered_data.iterrows():
+            weight = row[speed_column] / filtered_data[speed_column].max()  # Нормализация веса
+            heat_data.append([row['latitude_speedtest'], row['longitude_speedtest'], weight])
+        print(f"Данные для тепловой карты по скорости: {len(heat_data)} точек")
+        folium.plugins.HeatMap(heat_data, radius=15, blur=10, max_zoom=13, name="Тепловая карта по скорости").add_to(m)
+    elif map_type == 'heatmap_density':
+        heat_data = [[row['latitude_speedtest'], row['longitude_speedtest']] for _, row in filtered_data.iterrows()]
+        print(f"Данные для тепловой карты по плотности: {len(heat_data)} точек")
+        folium.plugins.HeatMap(heat_data, radius=15, blur=10, max_zoom=13, name="Тепловая карта по плотности").add_to(m)
+
     return m
 
 # Функция для получения статистики
