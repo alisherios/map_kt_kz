@@ -392,14 +392,25 @@ def create_charts(data, stats):
 # Маршрут для главной страницы
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # Получаем статистику для всех данных
+    stats = get_statistics(df)
+    
+    # Создаем графики для отображения на странице
+    charts = create_charts(df, stats)
+    
+    # Передаем статистику и графики в шаблон
+    return render_template('index.html', stats=stats, charts=charts)
 
 # Маршрут для страницы аналитики
 @app.route('/analytics')
 def analytics():
     # Получаем статистику для всех данных
     stats = get_statistics(df)
-    return render_template('analytics.html', stats=stats)
+    
+    # Создаем графики для отображения на странице
+    charts = create_charts(df, stats)
+    
+    return render_template('analytics.html', stats=stats, charts=charts)
 
 # Маршрут для получения карты с фильтрами
 @app.route('/get_map')
