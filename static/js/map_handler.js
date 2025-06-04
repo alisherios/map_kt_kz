@@ -91,7 +91,7 @@ function setupEventListeners() {
     });
     
     // Обработчики переключения режима отображения
-    document.querySelectorAll('input[name="displayMode"]').forEach(function(radio) {
+    document.querySelectorAll('input[name="mapType"]').forEach(function(radio) {
         radio.addEventListener('change', function() {
             loadMapData();
         });
@@ -118,7 +118,7 @@ function resetFilters() {
     document.getElementById('allProviders').checked = true;
     
     // Сброс режима отображения
-    document.getElementById('pointsMode').checked = true;
+    document.getElementById('pointsMap').checked = true;
     
     // Сброс диапазона скорости
     document.getElementById('speedRange').value = 500;
@@ -141,13 +141,9 @@ function loadMapData() {
     
     // Получаем режим отображения
     let mapType = 'points';
-    document.querySelectorAll('input[name="displayMode"]').forEach(function(radio) {
+    document.querySelectorAll('input[name="mapType"]').forEach(function(radio) {
         if (radio.checked) {
-            if (radio.id === 'heatmapSpeedMode') {
-                mapType = 'heatmap_speed';
-            } else if (radio.id === 'heatmapDensityMode') {
-                mapType = 'heatmap_density';
-            }
+            mapType = radio.value;
         }
     });
     
@@ -167,10 +163,10 @@ function loadMapData() {
             updateMap(data, mapType);
             
             // Обновляем статистику
-            loadStatistics(provider, minSpeed, maxSpeed);
+            // loadStatistics(provider, minSpeed, maxSpeed); // Статистика обновляется отдельно
         })
         .catch(error => {
-            console.error('Ошибка при загрузке статистики:', error);
+            console.error('Ошибка при загрузке данных карты:', error);
         });
 }
 
@@ -205,9 +201,10 @@ function updateMap(data, mapType) {
             // Создаем маркер
             const marker = L.marker([point.lat, point.lng], { icon: icon });
             
-            // Создаем всплывающее окно с информацией
+            // Создаем всплывающее окно с информацией и картинкой
             let popupContent = `
                 <div class="marker-popup">
+                    <img src="https://via.placeholder.com/150" alt="Placeholder Image">
                     <h5>Точка интернета</h5>
                     <p><strong>Адрес:</strong> ${point.address || 'Не указан'}</p>
                     <p><strong>Скорость:</strong> ${point.speed.toFixed(1)} Мбит/с</p>
@@ -333,7 +330,7 @@ function updateProviderStats(provider, stats) {
 // Переключение языка интерфейса
 function switchLanguage(lang) {
     // Скрываем все элементы текущего языка
-    document.querySelectorAll(`.lang-ru, .lang-kk`).forEach(el => {
+    document.querySelectorAll('.lang-ru, .lang-kk').forEach(el => {
         el.classList.add('d-none');
     });
     
@@ -361,3 +358,4 @@ document.addEventListener('DOMContentLoaded', function() {
         switchLanguage('kk');
     });
 });
+
