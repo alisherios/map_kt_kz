@@ -403,12 +403,16 @@ def index():
     # Получаем статистику
     stats = get_statistics(df)
     
+    # Создаем графики
+    charts = create_charts(df, stats)
+    
     # Сохраняем карту во временный файл
     map_html = m._repr_html_()
     
     return render_template('index.html', 
                           map_html=map_html,
-                          stats=stats)
+                          stats=stats,
+                          charts=charts)
 
 # Страница аналитики
 @app.route('/analytics')
