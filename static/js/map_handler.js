@@ -200,6 +200,16 @@ function updateMap(data, mapType) {
             
             // Создаем маркер
             const marker = L.marker([point.lat, point.lng], { icon: icon });
+
+            // Добавьте этот код перед строкой 205
+            let imageUrl = "/static/img/point-default.png"; // По умолчанию
+            if (point.providers.kt ) {
+                imageUrl = "/static/img/provider-kt.png";
+            } else if (point.providers.beeline) {
+                imageUrl = "/static/img/provider-beeline.png";
+            } else if (point.providers.almatv) {
+                imageUrl = "/static/img/provider-almatv.png";
+            }
             
             // Создаем всплывающее окно с информацией и картинкой
             let popupContent = `
