@@ -498,119 +498,130 @@
         });
         
         // Обработка фильтров
-        document.addEventListener('DOMContentLoaded', function() {
-            // Элементы фильтров
-            const mapTypeRadios = document.querySelectorAll('input[name="mapType"]');
-            const providerRadios = document.querySelectorAll('input[name="provider"]');
-            const speedRange = document.getElementById('speedRange');
-            const speedRangeValue = document.getElementById('speedRangeValue');
-            const applyFiltersBtn = document.getElementById('applyFilters');
-            const resetFiltersBtn = document.getElementById('resetFilters');
-            const speedLowBtn = document.getElementById('speedLow');
-            const speedMediumBtn = document.getElementById('speedMedium');
-            const speedHighBtn = document.getElementById('speedHigh');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Элементы фильтров
+        const mapTypeRadios = document.querySelectorAll('input[name="mapType"]');
+        const providerRadios = document.querySelectorAll('input[name="provider"]');
+        const speedRange = document.getElementById('speedRange');
+        const speedRangeValue = document.getElementById('speedRangeValue');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+        const resetFiltersBtn = document.getElementById('resetFilters');
+        const speedLowBtn = document.getElementById('speedLow');
+        const speedMediumBtn = document.getElementById('speedMedium');
+        const speedHighBtn = document.getElementById('speedHigh');
+        
+        // Текущие значения фильтров
+        let currentFilters = {
+            mapType: 'points',
+            provider: 'all',
+            minSpeed: 0,
+            maxSpeed: 500
+        };
+        
+        // Обновление отображения диапазона скорости
+        speedRange.addEventListener('input', function() {
+            speedRangeValue.textContent = `0 - ${this.value}`;
+            currentFilters.maxSpeed = parseInt(this.value);
+        });
+        
+        // Обработка кнопок предустановленных диапазонов скорости
+        speedLowBtn.addEventListener('click', function() {
+            currentFilters.minSpeed = 0;
+            currentFilters.maxSpeed = 50;
+            speedRange.value = 50;
+            speedRangeValue.textContent = `0 - 50`;
+        });
+        
+        speedMediumBtn.addEventListener('click', function() {
+            currentFilters.minSpeed = 50;
+            currentFilters.maxSpeed = 100;
+            speedRange.value = 100;
+            speedRangeValue.textContent = `50 - 100`;
+        });
+        
+        speedHighBtn.addEventListener('click', function() {
+            currentFilters.minSpeed = 100;
+            currentFilters.maxSpeed = 500;
+            speedRange.value = 500;
+            speedRangeValue.textContent = `100 - 500`;
+        });
+        
+        // Обработка радиокнопок типа карты
+        mapTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                currentFilters.mapType = this.value;
+            });
+        });
+        
+        // Обработка радиокнопок провайдера
+        providerRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                currentFilters.provider = this.value;
+            });
+        });
+        
+        // Применение фильтров
+        applyFiltersBtn.addEventListener('click', function() {
+            // Показываем индикатор загрузки
+            document.getElementById('map').innerHTML = '<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
             
-            // Текущие значения фильтров
-            let currentFilters = {
+            // Запрос отфильтрованной карты
+            fetch(`/get_map?provider=${currentFilters.provider}&min_speed=${currentFilters.minSpeed}&max_speed=${currentFilters.maxSpeed}&map_type=${currentFilters.mapType}`)
+                .then(response => response.text())
+                .then(html => {
+                    console.log('HTML карты:', html.substring(0, 500)); // Отладка: первые 500 символов
+                    document.getElementById('map').innerHTML = html;
+                    // Исполняем Leaflet-скрипты
+                    const mapDiv = document.getElementById('map');
+                    const scripts = mapDiv.getElementsByTagName('script');
+                    for (let script of scripts) {
+                        eval(script.innerHTML);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при загрузке карты:', error);
+                    document.getElementById('map').innerHTML = '<div class="alert alert-danger">Ошибка при загрузке карты</div>';
+                });
+            
+            // Запрос обновленной статистики
+            fetch(`/get_stats?provider=${currentFilters.provider}&min_speed=${currentFilters.minSpeed}&max_speed=${currentFilters.maxSpeed}`)
+                .then(response => response.json())
+                .then(stats => {
+                    console.log('Получена статистика:', stats);
+                    // Обновление статистики на странице (если она отображается)
+                    document.querySelector('.stats-card:nth-child(1) h3').textContent = stats.total_points;
+                    document.querySelector('.stats-card:nth-child(2) h3').textContent = stats.providers.kt.avg_download.toFixed(1);
+                    document.querySelector('.stats-card:nth-child(3) h3').textContent = stats.providers.beeline.avg_download.toFixed(1);
+                    document.querySelector('.stats-card:nth-child(4) h3').textContent = stats.providers.almatv.avg_download.toFixed(1);
+                })
+                .catch(error => {
+                    console.error('Ошибка при загрузке статистики:', error);
+                });
+        });
+        
+        // Сброс фильтров
+        resetFiltersBtn.addEventListener('click', function() {
+            // Сброс значений фильтров
+            document.getElementById('pointsMap').checked = true;
+            document.getElementById('allProviders').checked = true;
+            speedRange.value = 500;
+            speedRangeValue.textContent = '0 - 500';
+            
+            // Обновление текущих фильтров
+            currentFilters = {
                 mapType: 'points',
                 provider: 'all',
                 minSpeed: 0,
                 maxSpeed: 500
             };
             
-            // Обновление отображения диапазона скорости
-            speedRange.addEventListener('input', function() {
-                speedRangeValue.textContent = `0 - ${this.value}`;
-                currentFilters.maxSpeed = parseInt(this.value);
-            });
-            
-            // Обработка кнопок предустановленных диапазонов скорости
-            speedLowBtn.addEventListener('click', function() {
-                currentFilters.minSpeed = 0;
-                currentFilters.maxSpeed = 50;
-                speedRange.value = 50;
-                speedRangeValue.textContent = `0 - 50`;
-            });
-            
-            speedMediumBtn.addEventListener('click', function() {
-                currentFilters.minSpeed = 50;
-                currentFilters.maxSpeed = 100;
-                speedRange.value = 100;
-                speedRangeValue.textContent = `50 - 100`;
-            });
-            
-            speedHighBtn.addEventListener('click', function() {
-                currentFilters.minSpeed = 100;
-                currentFilters.maxSpeed = 500;
-                speedRange.value = 500;
-                speedRangeValue.textContent = `100 - 500`;
-            });
-            
-            // Обработка радиокнопок типа карты
-            mapTypeRadios.forEach(radio => {
-                radio.addEventListener('change', function() {
-                    currentFilters.mapType = this.value;
-                });
-            });
-            
-            // Обработка радиокнопок провайдера
-            providerRadios.forEach(radio => {
-                radio.addEventListener('change', function() {
-                    currentFilters.provider = this.value;
-                });
-            });
-            
-            // Применение фильтров
-            applyFiltersBtn.addEventListener('click', function() {
-                // Показываем индикатор загрузки
-                document.getElementById('map').innerHTML = '<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-                
-                // Запрос отфильтрованной карты
-                fetch(`/get_map?provider=${currentFilters.provider}&min_speed=${currentFilters.minSpeed}&max_speed=${currentFilters.maxSpeed}&map_type=${currentFilters.mapType}`)
-                    .then(response => response.text())
-                    .then(html => {
-                        document.getElementById('map').innerHTML = html;
-                    })
-                    .catch(error => {
-                        console.error('Ошибка при загрузке карты:', error);
-                        document.getElementById('map').innerHTML = '<div class="alert alert-danger">Ошибка при загрузке карты</div>';
-                    });
-                
-                // Запрос обновленной статистики
-                fetch(`/get_stats?provider=${currentFilters.provider}&min_speed=${currentFilters.minSpeed}&max_speed=${currentFilters.maxSpeed}`)
-                    .then(response => response.json())
-                    .then(stats => {
-                        // Обновление статистики на странице
-                        document.querySelector('.stats-card:nth-child(1) h3').textContent = stats.total_points;
-                        document.querySelector('.stats-card:nth-child(2) h3').textContent = stats.providers.kt.avg_download.toFixed(1);
-                        document.querySelector('.stats-card:nth-child(3) h3').textContent = stats.providers.beeline.avg_download.toFixed(1);
-                        document.querySelector('.stats-card:nth-child(4) h3').textContent = stats.providers.almatv.avg_download.toFixed(1);
-                    })
-                    .catch(error => {
-                        console.error('Ошибка при загрузке статистики:', error);
-                    });
-            });
-            
-            // Сброс фильтров
-            resetFiltersBtn.addEventListener('click', function() {
-                // Сброс значений фильтров
-                document.getElementById('pointsMap').checked = true;
-                document.getElementById('allProviders').checked = true;
-                speedRange.value = 500;
-                speedRangeValue.textContent = '0 - 500';
-                
-                // Обновление текущих фильтров
-                currentFilters = {
-                    mapType: 'points',
-                    provider: 'all',
-                    minSpeed: 0,
-                    maxSpeed: 500
-                };
-                
-                // Применение сброшенных фильтров
-                applyFiltersBtn.click();
-            });
+            // Применение сброшенных фильтров
+            applyFiltersBtn.click();
         });
+
+        // Инициализация карты при загрузке страницы
+        applyFiltersBtn.click();
+    });
     </script>
     
     <!-- Language Switcher JS -->
