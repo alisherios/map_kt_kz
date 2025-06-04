@@ -20,8 +20,8 @@ except Exception as e:
 
 # Функция для создания базовой карты
 def create_base_map():
-    # Центрируем карту на Астане
     m = folium.Map(location=[51.1605, 71.4704], zoom_start=12, tiles='CartoDB positron')
+    folium.LayerControl().add_to(m)
     return m
 
 # Функция для проверки и очистки данных
