@@ -3,105 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Аналитическая карта интернет-покрытия</title>
+    <title>Аналитическая карта Казахтелеком</title>
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
+    <!-- Google Fonts - Montserrat & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
     
-    <!-- Leaflet MarkerCluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     
-    <!-- Leaflet Awesome Markers CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css" />
-    
-    <!-- Custom CSS -->
     <style>
+        :root {
+            --primary-color: #0056A4;
+            --secondary-color: #FF6600;
+            --light-gray: #F5F7FA;
+            --dark-gray: #343A40;
+            --success-color: #4CAF50;
+            --warning-color: #FFCC00;
+            --danger-color: #F44336;
+            --font-heading: 'Montserrat', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+        
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f8f9fa;
+            font-family: var(--font-body);
+            background-color: var(--light-gray);
+            color: var(--dark-gray);
+            letter-spacing: 0.01em;
+            line-height: 1.6;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-heading);
+            font-weight: 600;
+            letter-spacing: -0.02em;
         }
         
         .navbar {
-            background-color: #0056A4;
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .navbar-brand img {
-            height: 30px;
-            margin-right: 10px;
-        }
-        
-        .map-container {
-            height: 600px;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .sidebar {
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .form-check-input:checked {
-            background-color: #0056A4;
-            border-color: #0056A4;
-        }
-        
-        .kt-color {
-            color: #0056A4;
-        }
-        
-        .beeline-color {
-            color: #FFCC00;
-        }
-        
-        .almatv-color {
-            color: #FF6600;
-        }
-        
-        footer {
-            background-color: #0056A4;
-            color: white;
-            padding: 30px 0;
-            margin-top: 50px;
-        }
-        
-        .btn-primary {
-            background-color: #0056A4;
-            border-color: #0056A4;
-        }
-        
-        .btn-primary:hover {
-            background-color: #004483;
-            border-color: #004483;
-        }
-        
-        .btn-outline-primary {
-            color: #0056A4;
-            border-color: #0056A4;
-        }
-        
-        .btn-outline-primary:hover {
-            background-color: #0056A4;
-            color: white;
-        }
-        
-        .marker-popup h5 {
-            margin-bottom: 10px;
-            color: #0056A4;
-        }
-        
-        .marker-popup ul {
-            padding-left: 15px;
+            height: 40px;
         }
         
         .language-switcher {
@@ -109,8 +61,213 @@
         }
         
         .language-switcher .btn {
-            padding: 2px 8px;
-            font-size: 0.8rem;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .language-switcher .btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .language-switcher .btn.active {
+            background-color: rgba(255, 255, 255, 0.25);
+            font-weight: 500;
+        }
+        
+        .sidebar {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .sidebar h5 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        .map-container {
+            height: 600px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dashboard {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .dashboard h4 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .stats-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stats-card h3 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .stats-card p {
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        
+        .kt-color {
+            color: var(--primary-color);
+        }
+        
+        .beeline-color {
+            color: var(--warning-color);
+        }
+        
+        .almatv-color {
+            color: var(--secondary-color);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #004483;
+            border-color: #004483;
+        }
+        
+        .form-range::-webkit-slider-thumb {
+            background: var(--primary-color);
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .nav-tabs .nav-link {
+            color: var(--dark-gray);
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            font-weight: 500;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .chart-container {
+            height: 400px;
+            margin-bottom: 30px;
+        }
+        
+        .footer {
+            background-color: var(--dark-gray);
+            color: white;
+            padding: 20px 0;
+            margin-top: 40px;
+        }
+        
+        /* Анимации */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 992px) {
+            .map-container {
+                height: 400px;
+            }
+            
+            .sidebar {
+                margin-bottom: 20px;
+            }
+        }
+        
+        /* Кастомизация Leaflet */
+        .leaflet-control-layers {
+            border-radius: 8px !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            border-radius: 10px !important;
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .marker-cluster {
+            background-color: rgba(0, 86, 164, 0.6);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+        
+        .marker-cluster div {
+            background-color: rgba(0, 86, 164, 0.8);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 80%;
+            height: 80%;
+        }
+        
+        /* Стили для всплывающего окна маркера */
+        .marker-popup {
+            padding: 5px;
+        }
+        
+        .marker-popup img {
+            width: 100%;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        /* Стиль для логотипа в навбаре */
+        .navbar-logo-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar-logo {
+            height: 40px;
+            margin-right: 10px;
         }
     </style>
 </head>
@@ -118,15 +275,20 @@
     <!-- Навигационная панель -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="https://telecom.kz/images/logo.svg" alt="Казахтелеком">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <div class="navbar-logo-container">
+                    <img src="https://telecom.kz/assets/img/logo.svg" alt="Казахтелеком" class="navbar-logo">
+                </div>
                 <span class="lang-ru">Аналитическая карта интернет-покрытия</span>
                 <span class="lang-kk d-none">Интернет жабу аналитикалық картасы</span>
             </a>
-            <div class="d-flex">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="/">
+                        <a class="nav-link active" href="#">
                             <span class="lang-ru">Карта</span>
                             <span class="lang-kk d-none">Карта</span>
                         </a>
@@ -138,50 +300,50 @@
                         </a>
                     </li>
                 </ul>
-                <div class="language-switcher">
-                    <button id="langRu" class="btn btn-sm btn-light">RU</button>
-                    <button id="langKk" class="btn btn-sm btn-outline-light">KK</button>
+                <div class="language-switcher d-flex">
+                    <button class="btn btn-sm active" data-lang="ru" id="langRu">RU</button>
+                    <button class="btn btn-sm ms-1" data-lang="kk" id="langKk">KK</button>
                 </div>
             </div>
         </div>
     </nav>
-    
+
     <!-- Основной контент -->
     <div class="container mt-4">
         <div class="row">
-            <!-- Боковая панель с фильтрами -->
-            <div class="col-lg-3 mb-4">
+            <!-- Левая панель с фильтрами -->
+            <div class="col-lg-3">
                 <div class="sidebar">
-                    <h5>
+                    <h5 class="mt-4">
                         <span class="lang-ru">Режим отображения</span>
                         <span class="lang-kk d-none">Көрсету режимі</span>
                     </h5>
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="displayMode" id="pointsMode" checked>
-                        <label class="form-check-label" for="pointsMode">
+                        <input class="form-check-input" type="radio" name="mapType" id="pointsMap" value="points" checked>
+                        <label class="form-check-label" for="pointsMap">
                             <span class="material-icons align-middle me-1" style="font-size: 18px;">place</span>
                             <span class="lang-ru">Точки интернета</span>
                             <span class="lang-kk d-none">Интернет нүктелері</span>
                         </label>
                     </div>
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="displayMode" id="heatmapSpeedMode">
-                        <label class="form-check-label" for="heatmapSpeedMode">
+                        <input class="form-check-input" type="radio" name="mapType" id="heatmapSpeed" value="heatmap_speed">
+                        <label class="form-check-label" for="heatmapSpeed">
                             <span class="material-icons align-middle me-1" style="font-size: 18px;">local_fire_department</span>
                             <span class="lang-ru">Тепловая карта по скорости</span>
                             <span class="lang-kk d-none">Жылдамдық бойынша жылу картасы</span>
                         </label>
                     </div>
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="radio" name="displayMode" id="heatmapDensityMode">
-                        <label class="form-check-label" for="heatmapDensityMode">
-                            <span class="material-icons align-middle me-1" style="font-size: 18px;">grid_3x3</span>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="mapType" id="heatmapDensity" value="heatmap_density">
+                        <label class="form-check-label" for="heatmapDensity">
+                            <span class="material-icons align-middle me-1" style="font-size: 18px;">grid_view</span>
                             <span class="lang-ru">Тепловая карта по плотности</span>
                             <span class="lang-kk d-none">Тығыздық бойынша жылу картасы</span>
                         </label>
                     </div>
                     
-                    <h5>
+                    <h5 class="mt-4">
                         <span class="lang-ru">Провайдер</span>
                         <span class="lang-kk d-none">Провайдер</span>
                     </h5>
@@ -209,7 +371,7 @@
                             <span class="lang-kk d-none">Beeline</span>
                         </label>
                     </div>
-                    <div class="form-check mb-4">
+                    <div class="form-check mb-3">
                         <input class="form-check-input" type="radio" name="provider" id="almatvProvider" value="almatv">
                         <label class="form-check-label almatv-color" for="almatvProvider">
                             <span class="material-icons align-middle me-1" style="font-size: 18px;">wifi</span>
@@ -227,7 +389,7 @@
                         <span class="lang-kk d-none">Жылдамдық диапазоны (Мбит/с):</span>
                         <span id="speedRangeValue">0 - 500</span>
                     </label>
-                    <input type="range" class="form-range mb-3" id="speedRange" min="0" max="500" step="10" value="500">
+                    <input type="range" class="form-range mb-3" id="speedRange" min="0" max="500" step="10">
                     
                     <div class="d-grid gap-2">
                         <button class="btn btn-sm btn-outline-primary" id="speedLow">
@@ -263,24 +425,22 @@
             <div class="col-lg-9">
                 <div class="map-container" id="map"></div>
                 
-                <!-- Ссылка на страницу аналитики -->
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card p-4 text-center">
-                            <h4 class="mb-3">
-                                <span class="lang-ru">Подробная аналитика и статистика</span>
-                                <span class="lang-kk d-none">Толық аналитика және статистика</span>
-                            </h4>
-                            <p class="mb-4">
-                                <span class="lang-ru">Для просмотра подробной аналитики по скорости интернета, распределению провайдеров и другой статистики перейдите на страницу аналитики.</span>
-                                <span class="lang-kk d-none">Интернет жылдамдығы, провайдерлер таралуы және басқа статистика бойынша толық аналитиканы көру үшін аналитика бетіне өтіңіз.</span>
-                            </p>
-                            <a href="/analytics" class="btn btn-primary btn-lg">
-                                <span class="material-icons align-middle me-1">analytics</span>
-                                <span class="lang-ru">Перейти к аналитике</span>
-                                <span class="lang-kk d-none">Аналитикаға өту</span>
-                            </a>
-                        </div>
+                <!-- Статистика -->
+                <div class="dashboard">
+                    <h4>
+                        <span class="lang-ru">Подробная аналитика и статистика</span>
+                        <span class="lang-kk d-none">Егжей-тегжейлі аналитика және статистика</span>
+                    </h4>
+                    <p class="mb-4">
+                        <span class="lang-ru">Для просмотра подробной аналитики по скорости интернета, распределению провайдеров и другой статистики перейдите на страницу аналитики.</span>
+                        <span class="lang-kk d-none">Интернет жылдамдығы, провайдерлердің таралуы және басқа статистика бойынша егжей-тегжейлі аналитиканы көру үшін аналитика бетіне өтіңіз.</span>
+                    </p>
+                    <div class="text-center">
+                        <a href="/analytics" class="btn btn-primary">
+                            <span class="material-icons align-middle me-1">analytics</span>
+                            <span class="lang-ru">Перейти к аналитике</span>
+                            <span class="lang-kk d-none">Аналитикаға өту</span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -288,51 +448,24 @@
     </div>
     
     <!-- Подвал -->
-    <footer class="mt-5">
+    <footer class="footer mt-5">
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <h5>Аналитическая карта интернет-покрытия Казахтелеком</h5>
-                    <p>Интерактивная карта для анализа скоростей интернета различных провайдеров в Казахстане.</p>
+                    <p>© 2025 Казахтелеком. Все права защищены.</p>
                 </div>
-                <div class="col-md-3">
-                    <h5>Ссылки</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="/" class="text-white">Главная</a></li>
-                        <li><a href="/analytics" class="text-white">Аналитика</a></li>
-                    </ul>
+                <div class="col-md-6 text-md-end">
+                    <p>Аналитическая карта интернет-покрытия</p>
                 </div>
-                <div class="col-md-3">
-                    <h5>Контакты</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="https://telecom.kz" class="text-white" target="_blank">telecom.kz</a></li>
-                        <li><a href="mailto:info@telecom.kz" class="text-white">info@telecom.kz</a></li>
-                    </ul>
-                </div>
-            </div>
-            <hr class="mt-4 mb-4" style="border-color: rgba(255,255,255,0.2);">
-            <div class="text-center">
-                <p class="mb-0">© 2025 Казахтелеком. Все права защищены.</p>
             </div>
         </div>
     </footer>
     
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    
-    <!-- Leaflet MarkerCluster JS -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    
-    <!-- Leaflet Awesome Markers JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.min.js"></script>
-    
-    <!-- Leaflet Heat JS -->
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    
-    <!-- Custom JS -->
     <script src="/static/js/map_handler.js"></script>
 </body>
 </html>
