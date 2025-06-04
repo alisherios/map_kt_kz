@@ -389,6 +389,22 @@ def create_charts(data, stats):
     
     return charts
 
+# Функция для создания карты с точками или тепловым слоем
+def create_map_with_data(provider='all', min_speed=0, max_speed=500, map_type='points'):
+    # Создаем базовую карту
+    m = create_base_map()
+    
+    # Добавляем слои в зависимости от типа карты
+    if map_type == 'points':
+        m = add_points_to_map(m, df, provider, min_speed, max_speed)
+    elif map_type == 'heatmap_speed':
+        m = add_heatmap_to_map(m, df, provider, min_speed, max_speed, 'speed')
+    elif map_type == 'heatmap_density':
+        m = add_heatmap_to_map(m, df, provider, min_speed, max_speed, 'density')
+    
+    # Возвращаем HTML-код карты
+    return m._repr_html_()
+
 # Маршрут для главной страницы
 @app.route('/')
 def index():
@@ -398,8 +414,11 @@ def index():
     # Создаем графики для отображения на странице
     charts = create_charts(df, stats)
     
-    # Передаем статистику и графики в шаблон
-    return render_template('index.html', stats=stats, charts=charts)
+    # Создаем начальную карту с точками
+    map_html = create_map_with_data()
+    
+    # Передаем статистику, графики и карту в шаблон
+    return render_template('index.html', stats=stats, charts=charts, map_html=map_html)
 
 # Маршрут для страницы аналитики
 @app.route('/analytics')
@@ -421,19 +440,8 @@ def get_map():
     max_speed = int(request.args.get('max_speed', 500))
     map_type = request.args.get('map_type', 'points')
     
-    # Создаем базовую карту
-    m = create_base_map()
-    
-    # Добавляем слои в зависимости от типа карты
-    if map_type == 'points':
-        m = add_points_to_map(m, df, provider, min_speed, max_speed)
-    elif map_type == 'heatmap_speed':
-        m = add_heatmap_to_map(m, df, provider, min_speed, max_speed, 'speed')
-    elif map_type == 'heatmap_density':
-        m = add_heatmap_to_map(m, df, provider, min_speed, max_speed, 'density')
-    
-    # Сохраняем карту во временный HTML-файл
-    map_html = m._repr_html_()
+    # Создаем карту с заданными параметрами
+    map_html = create_map_with_data(provider, min_speed, max_speed, map_type)
     
     return map_html
 
