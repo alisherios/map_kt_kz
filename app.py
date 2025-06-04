@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+@from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import numpy as np
 import folium
@@ -459,7 +459,7 @@ def get_map():
     # Добавляем контроль слоев
     folium.LayerControl().add_to(m)
     
-    # Возвращаем HTML-код карты
+    # Возвращаем HTML-код карты напрямую, а не через jsonify
     return m._repr_html_()
 
 # Маршрут для получения статистики
